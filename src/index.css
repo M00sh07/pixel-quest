@@ -1,0 +1,197 @@
+@import "@fontsource/press-start-2p";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Pixel Quest Dark Theme */
+    --background: 230 25% 8%;
+    --foreground: 45 100% 90%;
+
+    --card: 230 30% 12%;
+    --card-foreground: 45 100% 90%;
+
+    --popover: 230 30% 12%;
+    --popover-foreground: 45 100% 90%;
+
+    --primary: 45 100% 60%;
+    --primary-foreground: 230 25% 8%;
+
+    --secondary: 260 60% 45%;
+    --secondary-foreground: 45 100% 90%;
+
+    --muted: 230 20% 18%;
+    --muted-foreground: 230 15% 55%;
+
+    --accent: 140 70% 45%;
+    --accent-foreground: 230 25% 8%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 45 100% 95%;
+
+    --border: 230 30% 25%;
+    --input: 230 30% 20%;
+    --ring: 45 100% 60%;
+
+    --radius: 0px;
+
+    /* Custom Pixel Quest Colors */
+    --quest-gold: 45 100% 60%;
+    --quest-xp: 140 70% 45%;
+    --quest-mana: 220 80% 55%;
+    --quest-health: 0 75% 55%;
+    --quest-rare: 280 80% 60%;
+    --quest-legendary: 35 100% 55%;
+    --dungeon-dark: 230 35% 6%;
+    --dungeon-stone: 230 20% 15%;
+    --dungeon-glow: 45 100% 70%;
+
+    --sidebar-background: 230 30% 10%;
+    --sidebar-foreground: 45 100% 90%;
+    --sidebar-primary: 45 100% 60%;
+    --sidebar-primary-foreground: 230 25% 8%;
+    --sidebar-accent: 230 25% 18%;
+    --sidebar-accent-foreground: 45 100% 90%;
+    --sidebar-border: 230 30% 20%;
+    --sidebar-ring: 45 100% 60%;
+  }
+
+  .dark {
+    --background: 230 25% 8%;
+    --foreground: 45 100% 90%;
+    --card: 230 30% 12%;
+    --card-foreground: 45 100% 90%;
+    --popover: 230 30% 12%;
+    --popover-foreground: 45 100% 90%;
+    --primary: 45 100% 60%;
+    --primary-foreground: 230 25% 8%;
+    --secondary: 260 60% 45%;
+    --secondary-foreground: 45 100% 90%;
+    --muted: 230 20% 18%;
+    --muted-foreground: 230 15% 55%;
+    --accent: 140 70% 45%;
+    --accent-foreground: 230 25% 8%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 45 100% 95%;
+    --border: 230 30% 25%;
+    --input: 230 30% 20%;
+    --ring: 45 100% 60%;
+    --sidebar-background: 230 30% 10%;
+    --sidebar-foreground: 45 100% 90%;
+    --sidebar-primary: 45 100% 60%;
+    --sidebar-primary-foreground: 230 25% 8%;
+    --sidebar-accent: 230 25% 18%;
+    --sidebar-accent-foreground: 45 100% 90%;
+    --sidebar-border: 230 30% 20%;
+    --sidebar-ring: 45 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Press Start 2P', cursive;
+    image-rendering: pixelated;
+  }
+}
+
+@layer utilities {
+  .pixel-border {
+    box-shadow: 
+      inset -4px -4px 0px 0px hsl(var(--dungeon-dark)),
+      inset 4px 4px 0px 0px hsl(var(--dungeon-glow) / 0.3);
+    border: 4px solid hsl(var(--border));
+  }
+
+  .pixel-border-gold {
+    box-shadow: 
+      inset -4px -4px 0px 0px hsl(var(--dungeon-dark)),
+      inset 4px 4px 0px 0px hsl(var(--quest-gold) / 0.5);
+    border: 4px solid hsl(var(--quest-gold));
+  }
+
+  .pixel-text-shadow {
+    text-shadow: 
+      2px 2px 0px hsl(var(--dungeon-dark)),
+      4px 4px 0px hsl(var(--dungeon-dark) / 0.5);
+  }
+
+  .pixel-glow {
+    animation: pixel-glow 2s ease-in-out infinite alternate;
+  }
+
+  .quest-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--quest-gold) / 0) 0%,
+      hsl(var(--quest-gold) / 0.3) 50%,
+      hsl(var(--quest-gold) / 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 3s linear infinite;
+  }
+
+  .xp-bar-fill {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--quest-xp)),
+      hsl(140 90% 55%)
+    );
+    box-shadow: 0 0 10px hsl(var(--quest-xp) / 0.6);
+  }
+
+  .floating-animation {
+    animation: float 3s ease-in-out infinite;
+  }
+}
+
+@keyframes pixel-glow {
+  from {
+    filter: drop-shadow(0 0 4px hsl(var(--quest-gold) / 0.4));
+  }
+  to {
+    filter: drop-shadow(0 0 12px hsl(var(--quest-gold) / 0.8));
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes quest-complete {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+}
+
+.quest-complete-animation {
+  animation: quest-complete 0.5s ease-out forwards;
+}
