@@ -1,9 +1,8 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { PixelButton } from "./PixelButton";
-import { Sword, Star, Trash2, CheckCircle } from "lucide-react";
-
-export type QuestRarity = "common" | "rare" | "legendary";
+import { Sword, Star, Trash2, CheckCircle, Bell, RefreshCw } from "lucide-react";
+import { QuestRarity, RepeatFrequency } from "@/types/quest";
 
 interface QuestCardProps {
   id: string;
@@ -11,6 +10,9 @@ interface QuestCardProps {
   xpReward: number;
   rarity: QuestRarity;
   completed: boolean;
+  reminderTime?: string;
+  repeatFrequency?: RepeatFrequency;
+  repeatDays?: number[];
   onComplete: (id: string) => void;
   onDelete: (id: string) => void;
 }
@@ -33,15 +35,32 @@ const rarityColors: Record<QuestRarity, string> = {
   legendary: "text-quest-legendary",
 };
 
+const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const getRepeatLabel = (frequency?: RepeatFrequency, days?: number[]): string => {
+  if (!frequency || frequency === "none") return "";
+  if (frequency === "daily") return "Daily";
+  if (frequency === "weekly") return "Weekly";
+  if (frequency === "custom" && days && days.length > 0) {
+    return days.map(d => dayLabels[d]).join(", ");
+  }
+  return "";
+};
+
 export const QuestCard: React.FC<QuestCardProps> = ({
   id,
   title,
   xpReward,
   rarity,
   completed,
+  reminderTime,
+  repeatFrequency,
+  repeatDays,
   onComplete,
   onDelete,
 }) => {
+  const repeatLabel = getRepeatLabel(repeatFrequency, repeatDays);
+
   return (
     <div
       className={cn(
@@ -62,10 +81,22 @@ export const QuestCard: React.FC<QuestCardProps> = ({
 
         {/* Quest content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className={cn("text-[10px] uppercase", rarityColors[rarity])}>
               {rarityLabels[rarity]}
             </span>
+            {reminderTime && (
+              <span className="text-[8px] text-muted-foreground flex items-center gap-1">
+                <Bell className="w-3 h-3" />
+                {reminderTime}
+              </span>
+            )}
+            {repeatLabel && (
+              <span className="text-[8px] text-quest-mana flex items-center gap-1">
+                <RefreshCw className="w-3 h-3" />
+                {repeatLabel}
+              </span>
+            )}
           </div>
           <h3 className={cn(
             "text-xs leading-relaxed mb-2",
@@ -106,3 +137,5 @@ export const QuestCard: React.FC<QuestCardProps> = ({
     </div>
   );
 };
+
+export type { QuestRarity };

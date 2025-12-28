@@ -1,42 +1,36 @@
-import React, { useState, useEffect } from "react";
-import { QuestCard, QuestRarity } from "@/components/QuestCard";
+import React, { useState, useEffect, useCallback } from "react";
+import { QuestCard } from "@/components/QuestCard";
 import { XPBar } from "@/components/XPBar";
 import { AddQuestForm } from "@/components/AddQuestForm";
 import { PixelCharacter } from "@/components/PixelCharacter";
 import { QuestStats } from "@/components/QuestStats";
+import { DailyChallenges } from "@/components/DailyChallenges";
+import { CompletedQuestsPanel } from "@/components/CompletedQuestsPanel";
+import { AchievementsPanel } from "@/components/AchievementsPanel";
+import { useAchievements } from "@/hooks/useAchievements";
+import { useDailyChallenges } from "@/hooks/useDailyChallenges";
 import { toast } from "sonner";
-import { Sword, Shield, Scroll } from "lucide-react";
-
-interface Quest {
-  id: string;
-  title: string;
-  rarity: QuestRarity;
-  xpReward: number;
-  completed: boolean;
-  createdAt: Date;
-}
-
-const XP_PER_LEVEL = 100;
-
-const getXPReward = (rarity: QuestRarity): number => {
-  switch (rarity) {
-    case "common":
-      return 10;
-    case "rare":
-      return 25;
-    case "legendary":
-      return 50;
-    default:
-      return 10;
-  }
-};
+import { Sword, Shield, Scroll, Trophy, Award } from "lucide-react";
+import { 
+  Quest, 
+  QuestRarity, 
+  RepeatFrequency, 
+  getXPReward, 
+  getLevelFromTotalXP 
+} from "@/types/quest";
+import { PixelButton } from "@/components/PixelButton";
 
 const Index = () => {
   const [quests, setQuests] = useState<Quest[]>(() => {
-    const saved = localStorage.getItem("pixel-quests");
+    const saved = localStorage.getItem("pixel-quests-v2");
     if (saved) {
       const parsed = JSON.parse(saved);
-      return parsed.map((q: Quest) => ({ ...q, createdAt: new Date(q.createdAt) }));
+      return parsed.map((q: Quest) => ({ 
+        ...q, 
+        createdAt: new Date(q.createdAt),
+        completedAt: q.completedAt ? new Date(q.completedAt) : undefined,
+        repeatFrequency: q.repeatFrequency || "none",
+      }));
     }
     return [
       {
@@ -46,6 +40,7 @@ const Index = () => {
         xpReward: 10,
         completed: false,
         createdAt: new Date(),
+        repeatFrequency: "none" as RepeatFrequency,
       },
       {
         id: "2",
@@ -54,6 +49,7 @@ const Index = () => {
         xpReward: 25,
         completed: false,
         createdAt: new Date(),
+        repeatFrequency: "none" as RepeatFrequency,
       },
     ];
   });
@@ -68,9 +64,26 @@ const Index = () => {
     return saved ? parseInt(saved, 10) : 1;
   });
 
+  const [todayQuestsCompleted, setTodayQuestsCompleted] = useState(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const saved = localStorage.getItem(`pixel-daily-progress-${today}`);
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  const [todayXPEarned, setTodayXPEarned] = useState(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const saved = localStorage.getItem(`pixel-daily-xp-${today}`);
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  const [showAchievements, setShowAchievements] = useState(false);
+
+  const { achievements, checkAchievements } = useAchievements();
+  const { challenges, updateProgress, completedCount: dailyChallengesCompleted } = useDailyChallenges();
+
   // Save to localStorage
   useEffect(() => {
-    localStorage.setItem("pixel-quests", JSON.stringify(quests));
+    localStorage.setItem("pixel-quests-v2", JSON.stringify(quests));
   }, [quests]);
 
   useEffect(() => {
@@ -81,11 +94,47 @@ const Index = () => {
     localStorage.setItem("pixel-streak", streak.toString());
   }, [streak]);
 
-  const level = Math.floor(totalXP / XP_PER_LEVEL) + 1;
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    localStorage.setItem(`pixel-daily-progress-${today}`, todayQuestsCompleted.toString());
+  }, [todayQuestsCompleted]);
+
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    localStorage.setItem(`pixel-daily-xp-${today}`, todayXPEarned.toString());
+  }, [todayXPEarned]);
+
+  // Calculate level with scaling
+  const { level, currentLevelXP, xpForNextLevel } = getLevelFromTotalXP(totalXP);
   const completedCount = quests.filter((q) => q.completed).length;
+  const legendaryCompleted = quests.filter((q) => q.completed && q.rarity === "legendary").length;
   const activeCount = quests.filter((q) => !q.completed).length;
 
-  const handleAddQuest = (title: string, rarity: QuestRarity) => {
+  // Check achievements whenever stats change
+  useEffect(() => {
+    const newlyUnlocked = checkAchievements({
+      questsCompleted: completedCount,
+      xpEarned: totalXP,
+      streak,
+      legendaryCompleted,
+      dailyChallengesCompleted,
+    });
+
+    newlyUnlocked.forEach(achievement => {
+      toast.success(`Achievement Unlocked: ${achievement.name}!`, {
+        description: achievement.description,
+        icon: <Award className="w-4 h-4" />,
+      });
+    });
+  }, [completedCount, totalXP, streak, legendaryCompleted, dailyChallengesCompleted, checkAchievements]);
+
+  const handleAddQuest = (
+    title: string, 
+    rarity: QuestRarity,
+    reminderTime?: string,
+    repeatFrequency?: RepeatFrequency,
+    repeatDays?: number[]
+  ) => {
     const newQuest: Quest = {
       id: Date.now().toString(),
       title,
@@ -93,6 +142,9 @@ const Index = () => {
       xpReward: getXPReward(rarity),
       completed: false,
       createdAt: new Date(),
+      reminderTime,
+      repeatFrequency: repeatFrequency || "none",
+      repeatDays,
     };
     setQuests((prev) => [newQuest, ...prev]);
     toast.success("Quest accepted!", {
@@ -101,16 +153,34 @@ const Index = () => {
     });
   };
 
-  const handleCompleteQuest = (id: string) => {
+  const handleCompleteQuest = useCallback((id: string) => {
     const quest = quests.find((q) => q.id === id);
     if (quest && !quest.completed) {
+      const today = new Date().toISOString().split("T")[0];
+      
+      // Update quest
       setQuests((prev) =>
-        prev.map((q) => (q.id === id ? { ...q, completed: true } : q))
+        prev.map((q) => (q.id === id ? { 
+          ...q, 
+          completed: true,
+          completedAt: new Date(),
+          lastCompletedDate: today,
+        } : q))
       );
-      setTotalXP((prev) => prev + quest.xpReward);
+      
+      // Add XP
+      const xpGained = quest.xpReward;
+      setTotalXP((prev) => prev + xpGained);
+      
+      // Update today's progress
+      setTodayQuestsCompleted(prev => prev + 1);
+      setTodayXPEarned(prev => prev + xpGained);
+      
+      // Update daily challenges
+      updateProgress(todayQuestsCompleted + 1, todayXPEarned + xpGained, quest.rarity);
 
-      const newTotalXP = totalXP + quest.xpReward;
-      const newLevel = Math.floor(newTotalXP / XP_PER_LEVEL) + 1;
+      const newTotalXP = totalXP + xpGained;
+      const { level: newLevel } = getLevelFromTotalXP(newTotalXP);
 
       if (newLevel > level) {
         toast.success(`Level Up! You're now level ${newLevel}!`, {
@@ -119,12 +189,29 @@ const Index = () => {
         });
       } else {
         toast.success("Quest Complete!", {
-          description: `+${quest.xpReward} XP earned!`,
+          description: `+${xpGained} XP earned!`,
           icon: <Sword className="w-4 h-4" />,
         });
       }
+
+      // Handle repeating quests - create new instance
+      if (quest.repeatFrequency !== "none") {
+        setTimeout(() => {
+          const newRepeatingQuest: Quest = {
+            ...quest,
+            id: Date.now().toString(),
+            completed: false,
+            createdAt: new Date(),
+            completedAt: undefined,
+          };
+          setQuests(prev => [newRepeatingQuest, ...prev]);
+          toast.info("Repeating quest renewed!", {
+            description: `${quest.title} is ready to complete again.`,
+          });
+        }, 1000);
+      }
     }
-  };
+  }, [quests, totalXP, level, todayQuestsCompleted, todayXPEarned, updateProgress]);
 
   const handleDeleteQuest = (id: string) => {
     setQuests((prev) => prev.filter((q) => q.id !== id));
@@ -135,6 +222,7 @@ const Index = () => {
 
   const activeQuests = quests.filter((q) => !q.completed);
   const completedQuests = quests.filter((q) => q.completed);
+  const unlockedAchievements = achievements.filter(a => a.unlocked).length;
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -167,11 +255,26 @@ const Index = () => {
               </p>
             </div>
           </div>
+          
+          {/* Achievements Button */}
+          <PixelButton
+            variant="ghost"
+            onClick={() => setShowAchievements(true)}
+            className="mt-2"
+          >
+            <Trophy className="w-4 h-4 mr-2 text-quest-gold" />
+            <span className="text-[10px]">Achievements ({unlockedAchievements}/{achievements.length})</span>
+          </PixelButton>
         </header>
 
         {/* XP Bar */}
         <div className="mb-6">
-          <XPBar currentXP={totalXP} level={level} xpToNextLevel={XP_PER_LEVEL} />
+          <XPBar 
+            currentXP={totalXP} 
+            level={level} 
+            currentLevelXP={currentLevelXP}
+            xpToNextLevel={xpForNextLevel} 
+          />
         </div>
 
         {/* Stats */}
@@ -181,6 +284,11 @@ const Index = () => {
             activeQuests={activeCount}
             streak={streak}
           />
+        </div>
+
+        {/* Daily Challenges */}
+        <div className="mb-6">
+          <DailyChallenges challenges={challenges} />
         </div>
 
         {/* Add Quest Form */}
@@ -214,25 +322,13 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Completed Quests */}
-        {completedQuests.length > 0 && (
-          <section>
-            <h2 className="text-xs text-muted-foreground uppercase mb-4 flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              Completed Quests ({completedQuests.length})
-            </h2>
-            <div className="space-y-4">
-              {completedQuests.slice(0, 5).map((quest) => (
-                <QuestCard
-                  key={quest.id}
-                  {...quest}
-                  onComplete={handleCompleteQuest}
-                  onDelete={handleDeleteQuest}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Completed Quests Panel */}
+        <section className="mb-8">
+          <CompletedQuestsPanel 
+            quests={completedQuests} 
+            onDelete={handleDeleteQuest}
+          />
+        </section>
 
         {/* Footer */}
         <footer className="mt-12 text-center">
@@ -241,6 +337,14 @@ const Index = () => {
           </p>
         </footer>
       </div>
+
+      {/* Achievements Modal */}
+      {showAchievements && (
+        <AchievementsPanel 
+          achievements={achievements} 
+          onClose={() => setShowAchievements(false)} 
+        />
+      )}
     </div>
   );
 };

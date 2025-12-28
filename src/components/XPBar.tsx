@@ -1,16 +1,18 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Trophy, Star } from "lucide-react";
+import { getPlayerRole } from "@/types/quest";
 
 interface XPBarProps {
   currentXP: number;
   level: number;
+  currentLevelXP: number;
   xpToNextLevel: number;
 }
 
-export const XPBar: React.FC<XPBarProps> = ({ currentXP, level, xpToNextLevel }) => {
-  const xpInCurrentLevel = currentXP % xpToNextLevel;
-  const progress = (xpInCurrentLevel / xpToNextLevel) * 100;
+export const XPBar: React.FC<XPBarProps> = ({ currentXP, level, currentLevelXP, xpToNextLevel }) => {
+  const progress = (currentLevelXP / xpToNextLevel) * 100;
+  const role = getPlayerRole(level);
 
   return (
     <div className="bg-card pixel-border p-4">
@@ -20,7 +22,10 @@ export const XPBar: React.FC<XPBarProps> = ({ currentXP, level, xpToNextLevel })
             <Trophy className="w-5 h-5 text-dungeon-dark" />
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Adventurer</p>
+            <p className={cn("text-[10px] uppercase flex items-center gap-1", role.color)}>
+              <span>{role.icon}</span>
+              <span>{role.name}</span>
+            </p>
             <p className="text-sm text-primary pixel-text-shadow">Level {level}</p>
           </div>
         </div>
@@ -40,7 +45,7 @@ export const XPBar: React.FC<XPBarProps> = ({ currentXP, level, xpToNextLevel })
         />
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-[8px] text-foreground pixel-text-shadow">
-            {xpInCurrentLevel} / {xpToNextLevel}
+            {currentLevelXP} / {xpToNextLevel}
           </span>
         </div>
       </div>
